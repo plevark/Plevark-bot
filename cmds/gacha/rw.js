@@ -3,29 +3,94 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
 
-const obtenerImagen = async (keyword) => {
-  const endpoints = ["safebooru", "gelbooru", "danbooru"];
-
-  for (const endpoint of endpoints) {
-    try {
-      const url = `${api.url}/nsfw/${endpoint}?keyword=${keyword}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`);
-
-      const buffer = await res.arrayBuffer();
-
-      if (buffer.byteLength > 0) {
-        return Buffer.from(buffer);
+// 🔥 OBTENER IMAGEN DE ANILIST (API GRATIS)
+const obtenerImagenAniList = async (nombre) => {
+  try {
+    const query = `
+      query ($search: String) {
+        Character(search: $search) {
+          image {
+            large
+          }
+        }
       }
-    } catch (err) {
-      console.error(`Error en ${endpoint}:`, err.message);
+    `;
+    const response = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { search: nombre } })
+    });
+    const data = await response.json();
+    const imageUrl = data.data?.Character?.image?.large;
+    if (imageUrl) {
+      console.log(`📸 AniList: Imagen encontrada para ${nombre}`);
+      const imgRes = await fetch(imageUrl);
+      return Buffer.from(await imgRes.arrayBuffer());
     }
+    return null;
+  } catch (e) {
+    console.log(`❌ AniList falló para ${nombre}: ${e.message}`);
+    return null;
   }
+};
 
+// 🔥 OBTENER IMAGEN DE MYANIMELIST (RESPALDO)
+const obtenerImagenMAL = async (nombre) => {
+  try {
+    const url = `https://api.jikan.moe/v4/characters?q=${encodeURIComponent(nombre)}&limit=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const imageUrl = data.data?.[0]?.images?.jpg?.image_url;
+    if (imageUrl) {
+      console.log(`📸 MyAnimeList: Imagen encontrada para ${nombre}`);
+      const imgRes = await fetch(imageUrl);
+      return Buffer.from(await imgRes.arrayBuffer());
+    }
+    return null;
+  } catch (e) {
+    console.log(`❌ MyAnimeList falló para ${nombre}: ${e.message}`);
+    return null;
+  }
+};
+
+// 🔥 OBTENER IMAGEN DE KITSU (RESPALDO 2)
+const obtenerImagenKitsu = async (nombre) => {
+  try {
+    const url = `https://kitsu.io/api/edge/characters?filter[name]=${encodeURIComponent(nombre)}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const imageUrl = data.data?.[0]?.attributes?.image?.original;
+    if (imageUrl) {
+      console.log(`📸 Kitsu: Imagen encontrada para ${nombre}`);
+      const imgRes = await fetch(imageUrl);
+      return Buffer.from(await imgRes.arrayBuffer());
+    }
+    return null;
+  } catch (e) {
+    console.log(`❌ Kitsu falló para ${nombre}: ${e.message}`);
+    return null;
+  }
+};
+
+// 🔥 OBTENER IMAGEN (PRINCIPAL + RESPALDOS)
+const obtenerImagen = async (nombre, keyword) => {
+  // 1. Intentar con AniList
+  let imagen = await obtenerImagenAniList(nombre);
+  if (imagen) return imagen;
+  
+  // 2. Si falla, intentar con MyAnimeList
+  imagen = await obtenerImagenMAL(nombre);
+  if (imagen) return imagen;
+  
+  // 3. Si falla, intentar con Kitsu
+  imagen = await obtenerImagenKitsu(nombre);
+  if (imagen) return imagen;
+  
+  // 4. Si todo falla, devolver null
+  console.log(`❌ No se encontró imagen para: ${nombre}`);
   return null;
 };
 
-// 🔥 FUNCIÓN CORREGIDA: devuelve un ARRAY de personajes
 const obtenerPersonajes = () => {
   try {
     const contenido = fs.readFileSync('./lib/characters.json', 'utf-8')
@@ -61,7 +126,6 @@ export default {
     const chatId = msg.chat
     const userId = msg.sender
     const chat = await db.getChat(chatId)
-    const user = await db.getUser(userId)
     const chatUser = await db.getChatUser(chatId, userId)
     const now = Date.now()
 
@@ -76,7 +140,6 @@ export default {
 
     const loadingMsg = await msg.reply(`⏳ *Cargando personaje...*`);
 
-    // 🔥 OBTENER ARRAY DE PERSONAJES
     const personajes = obtenerPersonajes()
     
     if (!Array.isArray(personajes) || personajes.length === 0) {
@@ -84,7 +147,6 @@ export default {
       return;
     }
 
-    // 🔥 ELEGIR PERSONAJE ALEATORIO
     const personaje = personajes[Math.floor(Math.random() * personajes.length)]
     if (!personaje) {
       await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `❌ No se encontró ningún personaje disponible.` });
@@ -95,19 +157,15 @@ export default {
       ? chat.personajesReservados.find((p) => p.name === personaje.name)
       : null
 
-    // 🔥 CORREGIDO: Obtener poseedor correctamente
     let poseedor = null;
     try {
       const chatUsers = await db.getChatUser(chatId);
-      // Si chatUsers es un array, buscar el poseedor
       if (Array.isArray(chatUsers)) {
         poseedor = chatUsers.find(user =>
           Array.isArray(user.characters) && user.characters.some((c) => c.name === personaje.name)
         );
       }
-    } catch (e) {
-      console.log('Error al obtener poseedor:', e);
-    }
+    } catch (e) {}
 
     try {
       let estado = 'Libre'
@@ -145,38 +203,44 @@ ${dev}`
       // ========== 🔥 OBTENER IMAGEN ==========
       let imagen = null;
 
-      // 1️⃣ Si tiene múltiples imágenes, elegir UNA ALEATORIA
+      // 1️⃣ Si tiene imágenes predefinidas, usarlas
       if (personaje.images && Array.isArray(personaje.images) && personaje.images.length > 0) {
         try {
           const randomIndex = Math.floor(Math.random() * personaje.images.length);
           const imageUrl = personaje.images[randomIndex];
-          console.log(`📸 Imagen ${randomIndex + 1}/${personaje.images.length} para: ${personaje.name}`);
-          
           const response = await fetch(imageUrl);
           const arrayBuffer = await response.arrayBuffer();
           imagen = Buffer.from(arrayBuffer);
+          console.log(`📸 Imagen predefinida para: ${personaje.name}`);
         } catch (e) {
-          console.log(`❌ Error cargando imagen aleatoria: ${e.message}`);
+          console.log(`❌ Error con imagen predefinida: ${e.message}`);
         }
       }
-      // 2️⃣ Si tiene una sola imagen fija
-      else if (personaje.image) {
+      
+      // 2️⃣ Si tiene imagen fija
+      if (!imagen && personaje.image) {
         try {
           const response = await fetch(personaje.image);
           const arrayBuffer = await response.arrayBuffer();
           imagen = Buffer.from(arrayBuffer);
           console.log(`📸 Imagen fija para: ${personaje.name}`);
         } catch (e) {
-          console.log(`❌ Error cargando imagen fija: ${e.message}`);
+          console.log(`❌ Error con imagen fija: ${e.message}`);
         }
       }
-      // 3️⃣ Si no tiene imagen, buscar por keyword
+
+      // 3️⃣ Si no tiene imagen, buscar en APIs externas
       if (!imagen) {
-        imagen = await obtenerImagen(personaje.keyword, personaje.name);
+        console.log(`🔍 Buscando imagen para: ${personaje.name}`);
+        imagen = await obtenerImagen(personaje.name, personaje.keyword);
       }
 
+      // 4️⃣ Si no hay imagen, enviar solo texto
       if (!imagen) {
-        await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `✎ No se pudo obtener una imagen para *${personaje.name}*.` });
+        await sock.sendMessage(chatId, { 
+          edit: loadingMsg.key, 
+          text: `✎ No se pudo obtener imagen para *${personaje.name}*.\n\n${mensaje}` 
+        });
         return;
       }
 
