@@ -1,145 +1,108 @@
-import db from "#db"
-import fs from 'fs';
-
-function msToTime(duration) {
-  const seconds = Math.floor((duration / 1000) % 60)
-  const minutes = Math.floor((duration / (1000 * 60)) % 60)
-  return minutes === 0
-    ? `${seconds} segundo${seconds > 1 ? 's' : ''}`
-    : `${minutes} minuto${minutes > 1 ? 's' : ''}, ${seconds} segundo${seconds > 1 ? 's' : ''}`
-}
-
-function formatDate(timestamp) {
-  const date = new Date(timestamp)
-  const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
-  const months = [
-    'enero','febrero','marzo','abril','mayo','junio','julio',
-    'agosto','septiembre','octubre','noviembre','diciembre'
-  ]
-  return `${daysOfWeek[date.getDay()]}, ${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`
-}
+import db from "#db";
 
 export default {
-  command: ['claim', 'c'],
+  command: ['c', 'comprar'],
   category: 'gacha',
   run: async ({ msg, sock, args }) => {
-    const chatId = msg.chat
-    const userId = msg.sender
-    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-    const chatConfig = await db.getChat(chatId)
-    const botSettings = await db.getSettings(botId)
-    const monedas = botSettings.currency
-    const user = await db.getChatUser(chatId, userId)
-    const now = Date.now()
+    const chatId = msg.chat;
+    const userId = msg.sender;
+    const chat = await db.getChat(chatId);
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    const botSettings = await db.getSettings(botId);
+    const currency = botSettings?.currency || 'Coins';
 
-    if (chatConfig.adminonly || !chatConfig.gacha)
-      return msg.reply(mess.comandooff)
-
-    if (!user.buyCooldown) user.buyCooldown = 0
-    const remainingTime = user.buyCooldown - Date.now()
-    if (remainingTime > 0)
-      return msg.reply(
-        `《✤》 Debes esperar *${msToTime(remainingTime)}* para usar *"${msg.command}"* nuevamente`,
-      )
-
-    if (!msg.quoted) return msg.reply(`《✤》 Responde a una waifu para reclamarla.`)
-
-    let reservedCharacter = null
-    const quotedId = msg.quoted?.id
-
-    reservedCharacter = chatConfig.personajesReservados?.find(p => p.messageId === quotedId)
-
-    if (!reservedCharacter) {
-      return msg.reply(`✿ Solo puedes reclamar personajes generados con *rollwaifu*.`)
+    if (chat.adminonly || !chat.gacha) {
+      return msg.reply(mess.comandooff);
     }
 
-    const chatUsers = await db.getChatUser(chatId)
-    const alreadyClaimed = chatUsers.find(u =>
-      u.characters?.some(c => c.name?.toLowerCase() === reservedCharacter.name.toLowerCase()),
-    )
-
-    if (alreadyClaimed) {
-      if (alreadyClaimed.user_id === userId)
-        return msg.reply(`✤ Tú ya has reclamado a *${reservedCharacter.name}*.`)
-      const userData = await db.getUser(alreadyClaimed.user_id)
-      const ownerName = userData?.name || alreadyClaimed.user_id.split('@')[0]
-      return msg.reply(
-        `❀ El personaje *${reservedCharacter.name}* ya ha sido reclamado por *${ownerName}*.`,
-      )
+    if (!args[0]) {
+      return msg.reply(`✎ Debes escribir el *nombre del personaje* que quieres comprar.\n📌 *Ejemplo:* $buy Bakugo`);
     }
 
-    if (reservedCharacter.userId && now < reservedCharacter.reservedUntil) {
-      const isUserReserver = reservedCharacter.userId === userId
-      const reserverData = await db.getUser(reservedCharacter.userId)
-      const reserverName = reserverData?.name || reservedCharacter.userId.split('@')[0]
-      const secondsLeft = ((reservedCharacter.reservedUntil - now) / 1000).toFixed(1)
-      if (!isUserReserver)
-        return msg.reply(
-          `✿ *${reservedCharacter.name}* está protegido por *${reserverName}* durante *${secondsLeft}s*`,
+    const characterName = args.join(' ').toLowerCase().trim();
+
+    // 🔥 OBTENER ARRAY DE PERSONAJES DESDE characters.json
+    let characters = [];
+    try {
+      const fs = await import('fs');
+      const contenido = fs.readFileSync('./lib/characters.json', 'utf-8');
+      const data = JSON.parse(contenido);
+      
+      if (data.characters && Array.isArray(data.characters)) {
+        characters = data.characters;
+      } else if (Array.isArray(data)) {
+        characters = data;
+      } else {
+        characters = Object.values(data);
+      }
+    } catch (e) {
+      console.error('Error cargando characters.json:', e);
+      return msg.reply(`❌ Error al cargar los personajes.`);
+    }
+
+    // 🔥 BUSCAR PERSONAJE
+    const character = characters.find(c => 
+      c.name?.toLowerCase() === characterName ||
+      c.name?.toLowerCase().includes(characterName)
+    );
+
+    if (!character) {
+      return msg.reply(`❌ No se encontró el personaje *${args.join(' ')}*.`);
+    }
+
+    // 🔥 OBTENER CHATUSER (CREAR SI NO EXISTE)
+    let user = await db.getChatUser(chatId, userId);
+    if (!user) {
+      await db.updateChatUser(chatId, userId, 'coins', 0);
+      await db.updateChatUser(chatId, userId, 'characters', []);
+      user = await db.getChatUser(chatId, userId);
+    }
+
+    // 🔥 ASEGURAR VALORES NUMÉRICOS
+    const coins = typeof user.coins === 'number' && !isNaN(user.coins) ? user.coins : 0;
+    const userCharacters = Array.isArray(user.characters) ? user.characters : [];
+
+    // 🔥 VERIFICAR SI YA TIENE EL PERSONAJE
+    if (userCharacters.some(c => c.name?.toLowerCase() === character.name?.toLowerCase())) {
+      return msg.reply(`❌ Ya tienes a *${character.name}* en tu colección.`);
+    }
+
+    // 🔥 OBTENER CHATUSERS PARA VER QUIÉN TIENE EL PERSONAJE
+    const chatUsers = await db.getChatUser(chatId);
+    const poseedor = Array.isArray(chatUsers) 
+      ? chatUsers.find(u => 
+          Array.isArray(u.characters) && u.characters.some(c => c.name?.toLowerCase() === character.name?.toLowerCase())
         )
+      : null;
+
+    if (poseedor) {
+      const ownerData = await db.getUser(poseedor.user_id);
+      const ownerName = ownerData?.name || poseedor.user_id.split('@')[0];
+      return msg.reply(`❌ *${character.name}* ya pertenece a *${ownerName}*.`);
     }
 
-    if (
-      reservedCharacter.expiresAt &&
-      now > reservedCharacter.expiresAt &&
-      !reservedCharacter.user &&
-      !(reservedCharacter.userId && now < reservedCharacter.reservedUntil)
-    ) {
-      const expiredTime = ((now - reservedCharacter.expiresAt) / 1000).toFixed(1)
-      return msg.reply(
-        `❖ El personaje *${reservedCharacter.name}* ha expirado hace *${expiredTime}s*.`,
-      )
+    // 🔥 VERIFICAR SI TIENE SUFICIENTES MONEDAS
+    const price = character.value || 0;
+    if (coins < price) {
+      return msg.reply(`❌ No tienes suficientes *${currency}*. Necesitas *${price.toLocaleString()}* y tienes *${coins.toLocaleString()}*.`);
     }
 
-    if (user.coins < reservedCharacter.value)
-      return msg.reply(
-        `《✤》 No tienes suficiente *${monedas}* para comprar a *${reservedCharacter.name}*.`,
-      )
+    // 🔥 COMPRAR PERSONAJE
+    const newCoins = coins - price;
+    const newCharacters = [...userCharacters, {
+      name: character.name,
+      value: character.value || 0,
+      gender: character.gender,
+      source: character.source,
+      keyword: character.keyword,
+      image: character.image || '',
+      images: character.images || [],
+      claimedAt: Date.now()
+    }];
 
-    user.characters = user.characters || []
-    user.characters.push({
-      name: reservedCharacter.name,
-      value: reservedCharacter.value,
-      gender: reservedCharacter.gender,
-      source: reservedCharacter.source,
-      keyword: reservedCharacter.keyword,
-      claim: formatDate(now),
-      user: userId,
-    })
+    await db.updateChatUser(chatId, userId, 'coins', newCoins);
+    await db.updateChatUser(chatId, userId, 'characters', newCharacters);
 
-    const personajesReservados = chatConfig.personajesReservados.filter(
-      p => p.id !== reservedCharacter.id,
-    )
-    
-    await db.updateChatUser(chatId, userId, 'characters', user.characters)
-    await db.updateChatUser(chatId, userId, 'buyCooldown', now + 15 * 60000)
-    await db.updateChatUser(chatId, userId, 'coins', user.coins - reservedCharacter.value)
-    await db.updateChat(chatId, 'personajesReservados', personajesReservados)
-
-    const userData = await db.getUser(userId)
-    const displayName = userData?.name || userId.split('@')[0]
-    const duration = ((now - reservedCharacter.expiresAt + 60000) / 1000).toFixed(1)
-
-    const frases = [
-      `*${reservedCharacter.name}* ha sido reclamado por *${displayName}*`,
-      `*${displayName}* se llevó a *${reservedCharacter.name}* al valle de la Pascua`,
-      `*${displayName}* se llevó a *${reservedCharacter.name}* a la cama`,
-      `*${displayName}* se llevó a *${reservedCharacter.name}* a la luna de miel`,
-      `*${reservedCharacter.name}* reclutada por *${displayName}* para actos de terrorismo`,
-      `*${displayName}* ha reclamado a *${reservedCharacter.name}*`,
-      `*${displayName}* hizo dudar de su existencia a *${reservedCharacter.name}*`,
-      `*${displayName}* llevó a *${reservedCharacter.name}* a explorar el multiverso`,
-      `*${reservedCharacter.name}* ahora es fiel compañero de *${displayName}* en mil aventuras`,
-      `*${displayName}* robó el corazón de *${reservedCharacter.name}* con una mirada`,
-      `*${displayName}* fue elegido por *${reservedCharacter.name}* para gobernar juntos el reino`,
-      `*${displayName}* encendió la chispa en *${reservedCharacter.name}*, y no hubo marcha atrás`,
-      `*${displayName}* cayó rendido ante los encantos de *${displayName}*`,
-      `*${displayName}* invitó a *${reservedCharacter.name}* a una noche inolvidable bajo las estrellas`,
-      `*${displayName}* desató emociones intensas en *${reservedCharacter.name}* con solo un suspiro`,
-      `*${reservedCharacter.name}* y *${displayName}* desaparecieron entre susurros y miradas ardientes`,
-    ]
-
-    const final = frases[Math.floor(Math.random() * frases.length)]
-    await sock.reply(chatId, `✐ ${final} _(${duration}s)_`, msg)
-  },
-}
+    return msg.reply(`✅ Has comprado a *${character.name}* por *${price.toLocaleString()} ${currency}*.\n💰 Total: *${newCoins.toLocaleString()}*`);
+  }
+};

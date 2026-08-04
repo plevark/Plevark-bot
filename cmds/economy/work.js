@@ -1,50 +1,15 @@
-import db from "#db"
-export default {
-  command: ['w', 'work'],
-  category: 'rpg',
-  run: async ({ msg, sock, args, command, text, usedPrefix: prefix }) => {
-    const chat = await db.getChat(msg.chat)
-    const user = await db.getChatUser(msg.chat, msg.sender)
-    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-    const botSettings = await db.getSettings(botId)
-    const monedas = botSettings.currency;
+import db from "#db";
 
-    if (chat.adminonly || !chat.rpg)
-      return msg.reply(mess.comandooff)
-
-    if (!user.workCooldown) user.workCooldown = 0;
-    const remainingTime = user.workCooldown - Date.now();
-
-    if (remainingTime > 0) {
-      return msg.reply(`✿ Debes esperar *${msToTime(remainingTime)}* para trabajar de nuevo.`);
-    }
-
-    const rsl = Math.floor(Math.random() * 5000);     
-    user.workCooldown = Date.now() + 10 * 60 * 1000; // 10 minutos
-    user.coins += rsl;
-
-   await db.updateChatUser(msg.chat, msg.sender, 'coins', user.coins)
-   await db.updateChatUser(msg.chat, msg.sender, 'workCooldown', user.workCooldown)
-
-        await sock.reply(msg.chat, `「✿」 ${pickRandom(trabajo)} *¥${rsl.toLocaleString()} ${monedas}*.`, msg)
-  }
-};
-
-function msToTime(duration) {
+const msToTime = (duration) => {
+  if (duration <= 0) return '0 segundos';
   const seconds = Math.floor((duration / 1000) % 60);
   const minutes = Math.floor((duration / (1000 * 60)) % 60);
+  const pad = (n) => n.toString().padStart(2, '0');
+  if (minutes === 0) return `${pad(seconds)} segundo${seconds !== 1 ? 's' : ''}`;
+  return `${pad(minutes)} minuto${minutes !== 1 ? 's' : ''}, ${pad(seconds)} segundo${seconds !== 1 ? 's' : ''}`;
+};
 
-  const min = minutes < 10 ? '0' + minutes : minutes;
-  const sec = seconds < 10 ? '0' + seconds : seconds;
-
-  return min === '00'
-    ? `${sec} segundo${sec > 1 ? 's' : ''}`
-    : `${min} minuto${min > 1 ? 's' : ''}, ${sec} segundo${sec > 1 ? 's' : ''}`;
-}
-
-function pickRandom(list) {
-  return list[Math.floor(Math.random() * list.length)];
-}
+const pickRandom = (list) => list[Math.floor(Math.random() * list.length)];
 
 const trabajo = [
   "Trabajas como recolector de fresas y ganas",
@@ -131,5 +96,56 @@ const trabajo = [
   "Realizas un programa de radio y ganas",
   "Trabajas como tasador de arte y obtienes",
   "Eres un creador de contenido en redes sociales y ganas",
-  "Hiciste un workshop de manualidades y recibiste"
+  "Hiciste un workshop de manualidades y recibiste",
+  "Trabajaste con plevark y ganaste" // El especial, solo 1 entre 68
 ];
+
+export default {
+  command: ['w', 'work'],
+  category: 'economy',
+  run: async ({ msg, sock }) => {
+    const chat = await db.getChat(msg.chat);
+    if (chat.adminonly || !chat.rpg) return msg.reply(mess.comandooff);
+
+    // 🔥 OBTENER USUARIO (CREAR SI NO EXISTE)
+    let user = await db.getChatUser(msg.chat, msg.sender);
+    if (!user) {
+      await db.updateChatUser(msg.chat, msg.sender, 'coins', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'workCooldown', 0);
+      user = await db.getChatUser(msg.chat, msg.sender);
+    }
+
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    const botSettings = await db.getSettings(botId);
+    const monedas = botSettings?.currency || 'Coins';
+
+    // 🔥 ASEGURAR VALORES NUMÉRICOS
+    const coins = typeof user.coins === 'number' && !isNaN(user.coins) ? user.coins : 0;
+    const workCooldown = typeof user.workCooldown === 'number' && !isNaN(user.workCooldown) ? user.workCooldown : 0;
+
+    // 🔥 VALIDAR COOLDOWN
+    const remainingTime = workCooldown - Date.now();
+    if (remainingTime > 0) {
+      return msg.reply(`⏳ Debes esperar *${msToTime(remainingTime)}* para trabajar de nuevo.`);
+    }
+
+    // 🔥 SELECCIONAR TRABAJO
+    const trabajoSeleccionado = pickRandom(trabajo);
+    let ganancia;
+
+    // Si es el trabajo especial de Plevark, ganancia alta
+    if (trabajoSeleccionado === "Trabajaste con plevark y ganaste") {
+      ganancia = 50000;
+    } else {
+      // Ganancia normal: entre 3500 y 5000
+      ganancia = Math.floor(Math.random() * (5000 - 3500 + 1)) + 3500;
+    }
+
+    // 🔥 ACTUALIZAR DATOS
+    const nuevosCoins = coins + ganancia;
+    await db.updateChatUser(msg.chat, msg.sender, 'coins', nuevosCoins);
+    await db.updateChatUser(msg.chat, msg.sender, 'workCooldown', Date.now() + 10 * 60 * 1000);
+
+    return msg.reply(`《✿》 ${trabajoSeleccionado} *${ganancia.toLocaleString()} ${monedas}*.`);
+  }
+};

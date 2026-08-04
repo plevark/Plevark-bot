@@ -1,66 +1,123 @@
-import db from "#db"
+import db from "#db";
 
 export default {
-  command: ['topcount', 'topmensajes', 'topmsgcount', 'topmessages'],
-  category: 'rpg',
-  run: async ({ msg, sock, args, command, text, usedPrefix: prefix }) => {
-    const chatId = msg.chat
-    const chatData = await db.getChat(msg.chat)
-    const chatDatas = await db.getChatUser(msg.chat)
+  command: ['topmensajes', 'topmsg', 'top'],
+  category: 'economy',
+  run: async ({ msg, sock }) => {
+    try {
+      // 🔥 OBTENER TODOS LOS USUARIOS DEL CHAT
+      // Primero intentamos obtener el chat completo
+      const chat = await db.getChat(msg.chat);
+      
+      if (!chat) {
+        return msg.reply('《✧》 No se encontró información del chat.');
+      }
 
-    const now = new Date()
-    const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      // 🔥 OBTENER USUARIOS DEL CHAT (DE LA BASE DE DATOS)
+      // Si el chat tiene un objeto 'users', extraemos los IDs
+      let userIds = [];
+      
+      if (chat.users) {
+        // Si chat.users es un objeto con IDs como claves
+        if (typeof chat.users === 'object' && !Array.isArray(chat.users)) {
+          userIds = Object.keys(chat.users);
+        }
+        // Si chat.users es un array
+        else if (Array.isArray(chat.users)) {
+          userIds = chat.users.map(u => u.user_id || u.id).filter(Boolean);
+        }
+      }
 
-    const ranking = (chatDatas || [])
-      .map(user => {
-        const stats = user.stats || {}
-        const days = Object.entries(stats).filter(([date]) => new Date(date) >= cutoff)
+      // Si no hay usuarios en chat.users, intentar obtener de otra forma
+      if (userIds.length === 0) {
+        // Intentar obtener todos los chatUsers
+        const chatUsers = await db.getChatUser(msg.chat);
+        if (Array.isArray(chatUsers)) {
+          userIds = chatUsers.map(u => u.user_id || u.id).filter(Boolean);
+        } else if (typeof chatUsers === 'object') {
+          userIds = Object.keys(chatUsers);
+        }
+      }
 
-        const totalMsgs = days.reduce((acc, [, d]) => acc + (d.msgs || 0), 0)
-        const totalCmds = days.reduce((acc, [, d]) => acc + (d.cmds || 0), 0)
+      if (userIds.length === 0) {
+        return msg.reply('《✧》 No hay usuarios registrados en este chat.');
+      }
 
-        return { jid: user.user_id, totalMsgs, totalCmds }
-      })
-      .filter(u => u.totalMsgs > 0)
-      .sort((a, b) => b.totalMsgs - a.totalMsgs)
+      // 🔥 RECOPILAR ESTADÍSTICAS DE CADA USUARIO
+      const userStats = [];
+      const today = new Date().toLocaleDateString('es-CO', { 
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).split('/').reverse().join('-');
 
-    if (ranking.length === 0)
-      return msg.reply(`「✎」 No hay actividad registrada en los últimos 30 días.`)
+      for (const userId of userIds) {
+        if (!userId) continue;
+        
+        // Obtener datos del usuario en el chat
+        const userData = await db.getChatUser(msg.chat, userId);
+        if (!userData) continue;
+        
+        // Obtener nombre del usuario
+        const userInfo = await db.getUser(userId);
+        const name = userInfo?.name || userId.split('@')[0] || 'Desconocido';
+        
+        // Obtener stats
+        const stats = userData.stats || {};
+        const todayStats = stats[today] || { msgs: 0, cmds: 0 };
+        
+        // Calcular total de mensajes de todos los días
+        let totalMsgs = 0;
+        let totalCmds = 0;
+        for (const day in stats) {
+          if (stats[day]?.msgs) totalMsgs += stats[day].msgs;
+          if (stats[day]?.cmds) totalCmds += stats[day].cmds;
+        }
+        
+        userStats.push({
+          userId: userId,
+          name: name,
+          totalMsgs: totalMsgs,
+          totalCmds: totalCmds,
+          todayMsgs: todayStats.msgs || 0,
+          todayCmds: todayStats.cmds || 0
+        });
+      }
 
-    const page = parseInt(args[0]) || 1
-    const perPage = 10
-    const totalPages = Math.ceil(ranking.length / perPage)
+      if (userStats.length === 0) {
+        return msg.reply('《✧》 No hay estadísticas disponibles.');
+      }
 
-    if (page < 1 || page > totalPages)
-      return msg.reply(`「✎」 Página inválida. Solo hay ${totalPages} páginas disponibles.`)
+      // 🔥 ORDENAR POR TOTAL DE MENSAJES (DE MAYOR A MENOR)
+      userStats.sort((a, b) => b.totalMsgs - a.totalMsgs);
 
-    const start = (page - 1) * perPage
-    const end = start + perPage
-    const pageRanking = ranking.slice(start, end)
+      // 🔥 TOMAR SOLO LOS TOP 10
+      const top10 = userStats.slice(0, 10);
 
-    const fechaActual = now.toLocaleString('es-CO', { 
-      timeZone: 'America/Bogota', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
+      // 🔥 CONSTRUIR MENSAJE
+      let mensaje = '📊 *TOP 10 - USUARIOS CON MÁS MENSAJES*\n';
+      mensaje += '━━━━━━━━━━━━━━━━━━━━━━\n\n';
 
-    let report = `❀ Top de mensajes en los últimos *30* días\n\n`
+      const medallas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
-    for (let i = 0; i < pageRanking.length; i++) {
-      const u = pageRanking[i]
-      const na = await db.getUser(u.jid) || {}
-      const name = na.name || 'Usuario'
-      report += `*${start + i + 1}.* ${name}\n`
-      report += `   » Mensajes: \`${u.totalMsgs}\`, Comandos: \`${u.totalCmds}\`\n`
+      for (let i = 0; i < top10.length; i++) {
+        const user = top10[i];
+        const medalla = medallas[i] || `${i+1}.`;
+        mensaje += `${medalla} *${user.name}*\n`;
+        mensaje += `   📩 Mensajes: *${user.totalMsgs.toLocaleString()}*\n`;
+        mensaje += `   📝 Comandos: *${user.totalCmds.toLocaleString()}*\n`;
+        if (i < top10.length - 1) mensaje += '\n';
+      }
+
+      mensaje += '\n━━━━━━━━━━━━━━━━━━━━━━\n';
+      mensaje += `📅 *Hoy:* ${today}\n`;
+      mensaje += `👥 *Usuarios registrados:* ${userStats.length}`;
+
+      await msg.reply(mensaje);
+    } catch (e) {
+      console.error('Error en topcount:', e);
+      await msg.reply(`❌ Ocurrió un error: ${e.message}`);
     }
-
-    if (page < totalPages) {
-      report += `\n> Para ver la siguiente página › *${prefix + command} ${page + 1}*`
-    }
-
-    await sock.reply(chatId, report, msg)
   }
-}
+};

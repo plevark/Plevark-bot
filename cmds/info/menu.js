@@ -1,9 +1,8 @@
-import db from "#db"
+import db from "#db";
 import { getDevice, prepareWAMessageMedia } from 'baileys';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import axios from 'axios';
-import moment from 'moment-timezone';
 import { commands } from '../../lib/system/comandos.js';
 
 export default {
@@ -23,7 +22,12 @@ export default {
           year: 'numeric',
         })
         .replace(/,/g, '');
-      const tiempo2 = moment.tz('America/Bogota').format('hh:mm A');
+      // 🔥 HORA con JavaScript nativo (sin moment)
+      const tiempo2 = new Date().toLocaleTimeString('es-CO', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      });
 
       const botId = sock?.user?.id.split(':')[0] + '@s.whatsapp.net' || '';
       const botSettings = await db.getSettings(botId);
@@ -60,8 +64,8 @@ export default {
             : owner
           : 'Oculto por privacidad'
       }
-: ̗̀ꕥ *ᴛɪᴘᴏ ::* ${botType}
-: ̗̀☄︎ *sɪsᴛᴇᴍᴀ/ᴏᴘʀ ::* ${device}
+: ̗̀ꕥ *ᴛɪᴘᴏ :Bot Principal
+: ̗̀☄︎ *sɪsᴛᴇᴍᴀ/ᴏᴘʀ :Windows
 
 : ̗̀❖ *ᴛɪᴍᴇ ::* ${tiempo}, ${tiempo2}
 : ̗̀❖ *ᴜsᴇʀs ::* ${users.toLocaleString()}
@@ -108,7 +112,7 @@ export default {
           menu += `╰╼ׅࣶ፝֟╾╌ֵ╾͜─ํ͜┈ְ ࣭࣪⢏࣭ࣧ⢢࣭ׄ᎐፝֟͟͝᎐࣭ׄ⡔࣭ࣧ⡹࣭ׄ ְ┈ํ͜─͜╼ꨪᰰ╾࣮╌╼ࣶׅ፝֟╾╯ \n`
       }
 
-      menu += `\n> *${botname2} desarrollado por Diego* ૮(˶ᵔᵕᵔ˶)ა`;
+      menu += `\n> *${botname2} desarrollado por Plevark Ecosystem૮(˶ᵔᵕᵔ˶)ა`;
 
       const isVideo = banner.includes('.mp4') || banner.includes('.gif') || banner.includes('.webm');
       const contextBase = {
@@ -125,7 +129,7 @@ export default {
       } else {
         await sock.sendMessage(msg.chat, { 
           text: menu.trim(), 
-          linkPreview: link && banner ? (await prepareWAMessageMedia({ image: { url: banner } }, { upload: sock.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 'canonical-url': link, 'matched-text': link, title: botname, description: `${botname2}, Built With 💛 By Stellar`, jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, highQualityThumbnail: imageMessage || undefined }))) : undefined, 
+          linkPreview: link && banner ? (await prepareWAMessageMedia({ image: { url: banner } }, { upload: sock.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 'canonical-url': link, 'matched-text': link, title: botname, description: `${botname2}, Built By Plevark Ecosystem`, jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, highQualityThumbnail: imageMessage || undefined }))) : undefined, 
           contextInfo: contextBase
         }, { quoted: msg });
       }

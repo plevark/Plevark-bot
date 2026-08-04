@@ -10,12 +10,12 @@ global.api = {
 }
 
 global.msgglobal = '✿⸝꙳.˖ Ocurrió un problema, contacte al creador'
-global.dev = `ʙᴜɪʟᴛ ʙʏ ɪ'ᴍ ᴅɪᴇɢᴏ ♡`
+global.dev = `𝐛𝐮𝐢𝐥𝐝 𝐅𝐨𝐫 𝐏𝐥𝐞𝐯𝐚𝐫𝐤 ♡`
 
 global.mess = {
-  socket: '(∩´͈ ᴖ `͈∩ ྀི) Este comando solo puede ser ejecutado por un Socket.',
+  socket: '(∩´͈ ᴖ `͈∩ ྀི) Este comando solo puede ser ejecutado por el Bot.',
   admin: '٩ʕ◕౪◕ʔو Este comando solo puede ser ejecutado por los Administradores del Grupo.',
-  botAdmin: '(𓂂꜆◕⩊◕꜀𓂂) Este comando solo puede ser ejecutado si el Socket es Administrador del Grupo.',
+  botAdmin: '(𓂂꜆◕⩊◕꜀𓂂) Este comando solo puede ser ejecutado si el Bot es Administrador del Grupo.',
   nsfw: '(•ૢ⚈͒⌄⚈͒•ૢ) Los comandos de *NSFW* están desactivados en este grupo.',
   comandooff: 'ღゝ◡╹ )ノ Estos comandos estan desactivados en este grupo.'
 }

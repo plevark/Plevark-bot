@@ -1,4 +1,4 @@
-import db from "#db"
+import db from "#db";
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
@@ -25,10 +25,19 @@ const obtenerImagen = async (keyword) => {
   return null;
 };
 
+// 🔥 FUNCIÓN CORREGIDA: devuelve un ARRAY de personajes
 const obtenerPersonajes = () => {
   try {
     const contenido = fs.readFileSync('./lib/characters.json', 'utf-8')
-    return JSON.parse(contenido)
+    const data = JSON.parse(contenido)
+    
+    if (data.characters && Array.isArray(data.characters)) {
+      return data.characters
+    }
+    if (Array.isArray(data)) {
+      return data
+    }
+    return Object.values(data)
   } catch (error) {
     console.error('[Error] characters.json:', error)
     return []
@@ -65,18 +74,40 @@ export default {
       return msg.reply(`✎ Espera *${msToTime(restante)}* para volver a usar este comando.`)
     }
 
+    const loadingMsg = await msg.reply(`⏳ *Cargando personaje...*`);
+
+    // 🔥 OBTENER ARRAY DE PERSONAJES
     const personajes = obtenerPersonajes()
+    
+    if (!Array.isArray(personajes) || personajes.length === 0) {
+      await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `❌ No se encontró ningún personaje disponible.` });
+      return;
+    }
+
+    // 🔥 ELEGIR PERSONAJE ALEATORIO
     const personaje = personajes[Math.floor(Math.random() * personajes.length)]
-    if (!personaje) return msg.reply('《✤》 No se encontró ningún personaje disponible.')
+    if (!personaje) {
+      await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `❌ No se encontró ningún personaje disponible.` });
+      return;
+    }
 
     const reservado = Array.isArray(chat.personajesReservados)
       ? chat.personajesReservados.find((p) => p.name === personaje.name)
       : null
 
-    const chatUsers = await db.getChatUser(chatId)
-    const poseedor = chatUsers.find(user =>
-      Array.isArray(user.characters) && user.characters.some((c) => c.name === personaje.name)
-    )
+    // 🔥 CORREGIDO: Obtener poseedor correctamente
+    let poseedor = null;
+    try {
+      const chatUsers = await db.getChatUser(chatId);
+      // Si chatUsers es un array, buscar el poseedor
+      if (Array.isArray(chatUsers)) {
+        poseedor = chatUsers.find(user =>
+          Array.isArray(user.characters) && user.characters.some((c) => c.name === personaje.name)
+        );
+      }
+    } catch (e) {
+      console.log('Error al obtener poseedor:', e);
+    }
 
     try {
       let estado = 'Libre'
@@ -88,10 +119,20 @@ export default {
         estado = `Reservado por ${userData.name || 'Alguien'}`
       }
 
-      await db.updateChatUser(chatId, userId, 'rwCooldown', now + 15 * 60000)
+      await db.updateChatUser(chatId, userId, 'rwCooldown', now + 8 * 60000)
 
-      const valorPersonaje =
-        typeof personaje.value === 'number' ? personaje.value.toLocaleString() : '0'
+      // 🔥 VALOR ALEATORIO
+      const rand = Math.random() * 100;
+      let valorAleatorio;
+      if (rand < 80) {
+        valorAleatorio = Math.floor(Math.random() * (7000 - 50 + 1)) + 50;
+      } else if (rand < 95) {
+        valorAleatorio = Math.floor(Math.random() * (10000 - 8000 + 1)) + 8000;
+      } else {
+        valorAleatorio = Math.floor(Math.random() * (19000 - 11000 + 1)) + 11000;
+      }
+      const valorPersonaje = valorAleatorio.toLocaleString();
+
       const mensaje = `➩ Nombre › *${personaje.name || 'Desconocido'}*
 
 ੈ⚥‧₊˚ Género › *${personaje.gender || 'Desconocido'}*
@@ -101,29 +142,68 @@ export default {
 
 ${dev}`
 
-const imagen = await obtenerImagen(personaje.keyword, personaje.name);
+      // ========== 🔥 OBTENER IMAGEN ==========
+      let imagen = null;
 
-if (!imagen) {
-  return msg.reply(`✎ No se pudo obtener una imagen para *${personaje.name}*.`);
-}
+      // 1️⃣ Si tiene múltiples imágenes, elegir UNA ALEATORIA
+      if (personaje.images && Array.isArray(personaje.images) && personaje.images.length > 0) {
+        try {
+          const randomIndex = Math.floor(Math.random() * personaje.images.length);
+          const imageUrl = personaje.images[randomIndex];
+          console.log(`📸 Imagen ${randomIndex + 1}/${personaje.images.length} para: ${personaje.name}`);
+          
+          const response = await fetch(imageUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          imagen = Buffer.from(arrayBuffer);
+        } catch (e) {
+          console.log(`❌ Error cargando imagen aleatoria: ${e.message}`);
+        }
+      }
+      // 2️⃣ Si tiene una sola imagen fija
+      else if (personaje.image) {
+        try {
+          const response = await fetch(personaje.image);
+          const arrayBuffer = await response.arrayBuffer();
+          imagen = Buffer.from(arrayBuffer);
+          console.log(`📸 Imagen fija para: ${personaje.name}`);
+        } catch (e) {
+          console.log(`❌ Error cargando imagen fija: ${e.message}`);
+        }
+      }
+      // 3️⃣ Si no tiene imagen, buscar por keyword
+      if (!imagen) {
+        imagen = await obtenerImagen(personaje.keyword, personaje.name);
+      }
 
-const payload = {
-  image: imagen,
-  caption: mensaje,
-  mimetype: 'image/jpeg'
-};
+      if (!imagen) {
+        await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `✎ No se pudo obtener una imagen para *${personaje.name}*.` });
+        return;
+      }
 
-const sent = await sock.sendMessage(chatId, payload, { quoted: msg });
+      const payload = {
+        image: imagen,
+        caption: mensaje,
+        mimetype: 'image/jpeg'
+      };
+
+      const sent = await sock.sendMessage(chatId, payload, { quoted: msg });
+
+      await sock.sendMessage(chatId, { 
+        edit: loadingMsg.key, 
+        text: `✅ *${personaje.name}* cargado correctamente (Valor: ${valorPersonaje})` 
+      });
 
       if (!poseedor) {
         const idUnico = uuidv4().slice(0, 8)
         const nuevoReservado = {
           id: idUnico,
           name: personaje.name,
-          value: personaje.value || 0,
+          value: valorAleatorio,
           gender: personaje.gender,
           source: personaje.source,
           keyword: personaje.keyword,
+          image: personaje.image || '',
+          images: personaje.images || [],
           userId: userId,
           reservedUntil: now + 20000,
           expiresAt: now + 60000,
@@ -145,6 +225,7 @@ const sent = await sock.sendMessage(chatId, payload, { quoted: msg });
       }
     } catch (e) {
       await db.updateChatUser(chatId, userId, 'rwCooldown', 0)
+      await sock.sendMessage(chatId, { edit: loadingMsg.key, text: `❌ Ocurrió un error: ${e.message}` });
       return msg.reply(msgglobal)
     }
   },

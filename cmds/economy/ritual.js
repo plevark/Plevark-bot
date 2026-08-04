@@ -1,71 +1,94 @@
-import db from "#db"
+import db from "#db";
+
 export default {
   command: ['ritual'],
-  category: 'rpg',
-   run: async ({ msg, sock, args, command, text, usedPrefix: prefix }) => {
-    const botId = sock?.user?.id.split(':')[0] + '@s.whatsapp.net'
-    const botSettings = await db.getSettings(botId)
-    const monedas = botSettings?.currency || 'Coins'
+  category: 'economy',
+  run: async ({ msg, sock }) => {
+    const chat = await db.getChat(msg.chat);
+    if (chat.adminonly || !chat.rpg) return msg.reply(mess.comandooff);
 
-    const chat = await db.getChat(msg.chat)
-    if (chat.adminonly || !chat.rpg)
-      return msg.reply(mess.comandooff)
-
-    const user = await db.getChatUser(msg.chat, msg.sender)
-
-    const remaining = user.ritualCooldown - Date.now()
-    if (remaining > 0) {
-      return msg.reply(`✿ Debes esperar *${msToTime(remaining)}* para invocar otro ritual.`)
-    }
+    let user = await db.getChatUser(msg.chat, msg.sender);
     
-    user.ritualCooldown = Date.now() + 15 * 60000
+    // 🔥 CREAR USUARIO SI NO EXISTE
+    if (!user) {
+      await db.updateChatUser(msg.chat, msg.sender, 'coins', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'bank', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'ritualCooldown', 0);
+      user = await db.getChatUser(msg.chat, msg.sender);
+    }
 
-   await db.updateChatUser(msg.chat, msg.sender, 'ritualCooldown', user.ritualCooldown)
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    const botSettings = await db.getSettings(botId);
+    const monedas = botSettings?.currency || 'Coins';
 
-    const roll = Math.random()
-    let reward = 0
-    let narration = ''
-    let bonusMsg = ''
+    // 🔥 ASEGURAR VALORES NUMÉRICOS
+    const coins = typeof user.coins === 'number' && !isNaN(user.coins) ? user.coins : 0;
+    const ritualCooldown = typeof user.ritualCooldown === 'number' && !isNaN(user.ritualCooldown) ? user.ritualCooldown : 0;
+
+    // 🔥 VALIDAR COOLDOWN
+    const remaining = ritualCooldown - Date.now();
+    if (remaining > 0) {
+      return msg.reply(`⏳ Debes esperar *${msToTime(remaining)}* para invocar otro ritual.`);
+    }
+
+    // 🔥 GENERAR RESULTADO
+    const roll = Math.random();
+    let reward = 0;
+    let narration = '';
+    let bonusMsg = '';
+    let nuevosCoins = coins;
 
     if (roll < 0.05) {
-      reward = Math.floor(Math.random() * 100000) + 50000
-      narration = '✿ ¡Has invocado un espíritu ancestral que te entrega un tesoro cósmico!'
-      bonusMsg = '\n❀ Recompensa MÍTICA obtenida!'
-    } else if (roll < 0.25) {
-      reward = Math.floor(Math.random() * 10000) + 2000
-      narration = '✿ Tu ritual abre un portal y caen riquezas ardientes del vacío'
-    } else if (roll < 0.75) {
-      reward = Math.floor(Math.random() * 5000) + 500
-      narration = `❀ Bajo la luna, tu ritual te concede *${reward.toLocaleString()} ${monedas}*`
-    } else {
-      const loss = Math.floor(Math.random() * 2000) + 500
-      user.coins = Math.max(0, user.coins - loss)
-      return msg.reply(`✿ El ritual salió mal... una maldición te arrebató *${loss.toLocaleString()} ${monedas}*`)
+      // 🌟 ÉPICO (5%)
+      reward = Math.floor(Math.random() * 100000) + 50000;
+      narration = '🌟 ¡Has invocado un espíritu ancestral que te entrega un tesoro cósmico!';
+      bonusMsg = '\n✨ Recompensa MÍTICA obtenida!';
+    } 
+    else if (roll < 0.25) {
+      // 🎁 BUENO (20%)
+      reward = Math.floor(Math.random() * 10000) + 2000;
+      narration = '🌙 Tu ritual abre un portal y caen riquezas ardientes del vacío';
+    } 
+    else if (roll < 0.75) {
+      // 📦 NORMAL (50%)
+      reward = Math.floor(Math.random() * 5000) + 500;
+      narration = `🌙 Bajo la luna, tu ritual te concede *${reward.toLocaleString()} ${monedas}*`;
+    } 
+    else {
+      // 💀 PÉRDIDA (25%)
+      const loss = Math.floor(Math.random() * 2000) + 500;
+      nuevosCoins = Math.max(0, coins - loss);
+      await db.updateChatUser(msg.chat, msg.sender, 'coins', nuevosCoins);
+      await db.updateChatUser(msg.chat, msg.sender, 'ritualCooldown', Date.now() + 15 * 60 * 1000);
+      return msg.reply(`💀 El ritual salió mal... una maldición te arrebató *${loss.toLocaleString()} ${monedas}*`);
     }
 
+    // 🔥 BONUS ALEATORIO (15%)
     if (Math.random() < 0.15) {
-      const bonus = Math.floor(Math.random() * 4000) + 1000
-      reward += bonus
-      bonusMsg += `\n❀ ¡Energía extra! Ganaste *${bonus.toLocaleString()}* ${monedas} adicionales`
+      const bonus = Math.floor(Math.random() * 4000) + 1000;
+      reward += bonus;
+      bonusMsg += `\n✨ ¡Energía extra! Ganaste *${bonus.toLocaleString()}* ${monedas} adicionales`;
     }
 
-    user.coins += reward
+    // 🔥 SUMAR RECOMPENSA
+    nuevosCoins = coins + reward;
+    await db.updateChatUser(msg.chat, msg.sender, 'coins', nuevosCoins);
+    await db.updateChatUser(msg.chat, msg.sender, 'ritualCooldown', Date.now() + 15 * 60 * 1000);
 
-   await db.updateChatUser(msg.chat, msg.sender, 'coins', user.coins)
+    let mensaje = `${narration}\n💰 Ganaste *${reward.toLocaleString()} ${monedas}*`;
+    if (bonusMsg) mensaje += `\n${bonusMsg}`;
+    mensaje += `\n💳 Total: *${nuevosCoins.toLocaleString()}*`;
 
-    let msg2 = `${narration}\nGanaste *${reward.toLocaleString()} ${monedas}*`
-    if (bonusMsg) msg2 += `\n${bonusMsg}`
-
-    await sock.reply(msg.chat, msg2, msg)
-
-  },
+    return msg.reply(mensaje);
+  }
 };
 
 function msToTime(duration) {
-  let seconds = Math.floor((duration / 1000) % 60)
-  let minutes = Math.floor((duration / (1000 * 60)) % 60)
-  minutes = minutes < 10 ? '0' + minutes : minutes
-  seconds = seconds < 10 ? '0' + seconds : seconds
-  if (minutes === '00') return `${seconds} segundo${seconds > 1 ? 's' : ''}`
-  return `${minutes} minuto${minutes > 1 ? 's' : ''}, ${seconds} segundo${seconds > 1 ? 's' : ''}`
+  const seconds = Math.floor((duration / 1000) % 60);
+  const minutes = Math.floor((duration / (1000 * 60)) % 60);
+  const min = minutes < 10 ? '0' + minutes : minutes;
+  const sec = seconds < 10 ? '0' + seconds : seconds;
+  return min === '00' 
+    ? `${sec} segundo${sec > 1 ? 's' : ''}` 
+    : `${min} minuto${min > 1 ? 's' : ''}, ${sec} segundo${sec > 1 ? 's' : ''}`;
 }

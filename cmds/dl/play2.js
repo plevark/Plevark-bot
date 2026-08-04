@@ -1,36 +1,29 @@
-import yts from 'yt-search'
-import fetch from 'node-fetch'
-import { getBuffer } from '#serialize'
+import ytsearch from "yt-search";
+import ytdlp from "yt-dlp";
+import { getBuffer } from "#serialize";
+import fs from "fs";
+import path from "path";
 
 export default {
-  command: ['play2', 'mp4', 'ytmp4', 'ytvideo', 'playvideo'],
-  category: 'downloader',
+  command: ["play2", "ytaudio", "mp3"],
+  category: "downloader",
   run: async ({ msg, sock, args }) => {
-
     try {
       if (!args[0]) {
-        return msg.reply('《✧》Por favor, menciona el nombre o URL del video que deseas descargar')
+        return msg.reply("《✧》 Por favor, menciona el nombre o URL del video.");
       }
 
-      const text = args.join(' ')
-      const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
-      const query = videoMatch ? 'https://youtu.be/' + videoMatch[1] : text
-
-      const search = await yts(query)
-      const videoInfo = videoMatch
-        ? search.videos.find(v => v.videoId === videoMatch[1]) || search.all[0]
-        : search.all[0]
-
-      if (!videoInfo) {
-        return msg.reply('《✧》 No se encontró información del video.')
+      const text = args.join(" ");
+      const searchResult = await ytsearch(text);
+      if (!searchResult.videos || !searchResult.videos.length) {
+        return msg.reply("《✧》 No se encontró información del video.");
       }
 
-      const { timestamp: duration } = videoInfo
-      const url = videoInfo.url
-      const title = videoInfo.title
-      const vistas = (videoInfo.views || 0).toLocaleString()
-      const canal = videoInfo.author?.name || 'Desconocido'
-      const thumbBuffer = await getBuffer(videoInfo.image)
+      const video = searchResult.videos[0];
+      const { title, author, timestamp: duration, views, url, image } = video;
+      const vistas = (views || 0).toLocaleString();
+      const canal = author?.name || author || "Desconocido";
+      const thumbBuffer = await getBuffer(image);
 
       const caption = `【　✿　】 _\`୨୧  Download\` ───── *${title}*_
 
@@ -39,33 +32,35 @@ export default {
 > _✰ \`Vistas\` ── ${vistas}_
 > _🜸 \`Enlace\` ── ${url}_
 
-> _──  ִ    ۟  *¡Enviando video, por favor espera!*_`
+> _──  ִ    ۟  *¡Enviando audio, por favor espera!*_`;
 
-      await sock.sendMessage(msg.chat, { image: thumbBuffer, caption }, { quoted: msg })
+      await sock.sendMessage(msg.chat, { image: thumbBuffer, caption }, { quoted: msg });
 
-      const endpoint = `${api.url}/dl/ytmp4?url=${encodeURIComponent(url)}&quality=auto&key=${api.key}`
-      const res = await fetch(endpoint, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-          'Accept': 'application/json'
-        }
-      }).then(r => r.json())
+      const outputPath = path.join(process.cwd(), 'temp', `${Date.now()}.mp3`);
+      if (!fs.existsSync('temp')) fs.mkdirSync('temp');
 
-      if (!res?.status || !res.data?.dl) {
-        return msg.reply('《✧》 No se pudo descargar el *video*, intenta más tarde.')
-      }
+      await new Promise((resolve, reject) => {
+        const yt = ytdlp(url, {
+          filter: 'audioonly',
+          quality: '140',
+          output: outputPath,
+        });
+        yt.on('end', resolve);
+        yt.on('error', reject);
+      });
 
-      const videoBuffer = await getBuffer(res.data.dl)
+      const audioBuffer = fs.readFileSync(outputPath);
+      fs.unlinkSync(outputPath);
 
-      const mensaje = {
-        video: { url: res.result.downloadUrl },
-        fileName: `${res.result?.title || 'video'}.mp4`,
-        mimetype: 'video/mp4'
-      }
-
-      await sock.sendMessage(msg.chat, mensaje, { quoted: msg })
+      await sock.sendMessage(msg.chat, {
+        audio: audioBuffer,
+        mimetype: 'audio/mpeg',
+        fileName: `${title}.mp3`,
+        ptt: true,
+      }, { quoted: msg });
     } catch (e) {
-      await msg.reply(msgglobal)
+      console.error(e);
+      await msg.reply("《✧》 Ocurrió un error al descargar el audio.");
     }
-  }
-}
+  },
+};

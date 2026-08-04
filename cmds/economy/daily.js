@@ -1,88 +1,99 @@
-import db from "#db"
+import db from "#db";
+
 export default {
   command: ['daily'],
-  category: 'rpg',
+  category: 'economy',
   run: async ({ msg, sock }) => {
-    const chat = await db.getChat(msg.chat)
-    const user = await db.getChatUser(msg.chat, msg.sender)
-    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-    const botSettings = await db.getSettings(botId)
-    const monedas = botSettings.currency
+    const chat = await db.getChat(msg.chat);
+    if (chat.adminonly || !chat.rpg) return msg.reply(mess.comandooff);
 
-    const now = Date.now()
-    const oneDay = 24 * 60 * 60 * 1000
-    const twoDays = oneDay * 2
-
-    if (chat.adminonly || !chat.rpg)
-      return msg.reply(mess.comandooff)
-
-    const timeSinceLast = now - user.lastDaily
-
-    if (timeSinceLast < oneDay) {
-      const restante = formatRemainingTime(oneDay - timeSinceLast)
-     return msg.reply(
-        `ꕥ Ya has reclamado tu *Daily* de hoy.\n` +
-        `> Puedes reclamarlo de nuevo en *${restante}*`
-      ) 
+    let user = await db.getChatUser(msg.chat, msg.sender);
+    
+    // 🔥 CREAR USUARIO SI NO EXISTE
+    if (!user) {
+      await db.updateChatUser(msg.chat, msg.sender, 'coins', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'bank', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'dailyStreak', 0);
+      await db.updateChatUser(msg.chat, msg.sender, 'lastDaily', 0);
+      user = await db.getChatUser(msg.chat, msg.sender);
     }
 
-   if (timeSinceLast > twoDays) {
-  const perdioRacha = user.dailyStreak >= 10
-  user.dailyStreak = 1
-  user.lastDaily = now
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    const botSettings = await db.getSettings(botId);
+    const monedas = botSettings?.currency || 'Coins';
 
-   await db.updateChatUser(msg.chat, msg.sender, 'dailyStreak', user.dailyStreak)
-   await db.updateChatUser(msg.chat, msg.sender, 'lastDaily', user.lastDaily)
+    // 🔥 ASEGURAR VALORES NUMÉRICOS
+    const coins = typeof user.coins === 'number' && !isNaN(user.coins) ? user.coins : 0;
+    const dailyStreak = typeof user.dailyStreak === 'number' && !isNaN(user.dailyStreak) ? user.dailyStreak : 0;
+    const lastDaily = typeof user.lastDaily === 'number' && !isNaN(user.lastDaily) ? user.lastDaily : 0;
 
-  const recompensa = calcularRecompensa(user.dailyStreak)
-  const siguiente = calcularRecompensa(user.dailyStreak + 1)
-  user.coins += recompensa
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const twoDays = oneDay * 2;
 
-   await db.updateChatUser(msg.chat, msg.sender, 'coins', user.coins)
+    const timeSinceLast = now - lastDaily;
 
-    return sock.reply(msg.chat, `「✿」 Has reclamado tu recompensa diaria de *${recompensa.toLocaleString()} ${monedas}*! (Día *1*)\n` +
-    `> Día *2* » *¥${siguiente.toLocaleString()}*` +
-    (perdioRacha ? `\n> ☆ ¡Has perdido tu racha de días!` : ''), msg)
-}
+    // 🔥 SI NUNCA HA RECLAMADO
+    if (lastDaily === 0) {
+      const recompensa = calcularRecompensa(1);
+      const nuevosCoins = coins + recompensa;
+      
+      await db.updateChatUser(msg.chat, msg.sender, 'coins', nuevosCoins);
+      await db.updateChatUser(msg.chat, msg.sender, 'dailyStreak', 1);
+      await db.updateChatUser(msg.chat, msg.sender, 'lastDaily', now);
+      
+      return msg.reply(`✅ Has reclamado tu recompensa diaria de *${recompensa.toLocaleString()} ${monedas}*! (Día *1*)`);
+    }
 
-    user.dailyStreak += 1
-    user.lastDaily = now
+    if (timeSinceLast < oneDay) {
+      const restante = formatRemainingTime(oneDay - timeSinceLast);
+      return msg.reply(`⏳ Ya has reclamado tu Daily. Vuelve en *${restante}*.`);
+    }
 
-   await db.updateChatUser(msg.chat, msg.sender, 'dailyStreak', user.dailyStreak)
-   await db.updateChatUser(msg.chat, msg.sender, 'lastDaily', user.lastDaily)
+    let nuevaRacha = dailyStreak;
+    let perdioRacha = false;
 
-    const recompensa = calcularRecompensa(user.dailyStreak)
-    const siguiente = calcularRecompensa(user.dailyStreak + 1)
-    user.coins += recompensa
+    if (timeSinceLast > twoDays) {
+      nuevaRacha = 1;
+      perdioRacha = true;
+    } else {
+      nuevaRacha = dailyStreak + 1;
+    }
 
-   await db.updateChatUser(msg.chat, msg.sender, 'coins', user.coins)
+    const recompensa = calcularRecompensa(nuevaRacha);
+    const siguiente = calcularRecompensa(nuevaRacha + 1);
+    const nuevosCoins = coins + recompensa;
 
-    const rachaExtra = user.dailyStreak >= 10
-      ? `\n> ☆ ¡Racha de *${user.dailyStreak}* días, ¡Sigue así!`
-      : ''
+    await db.updateChatUser(msg.chat, msg.sender, 'coins', nuevosCoins);
+    await db.updateChatUser(msg.chat, msg.sender, 'dailyStreak', nuevaRacha);
+    await db.updateChatUser(msg.chat, msg.sender, 'lastDaily', now);
 
-    await sock.reply(msg.chat, `「✿」 Has reclamado tu recompensa diaria de *¥${recompensa.toLocaleString()} ${monedas}* (Día *${user.dailyStreak}*)\n` +
-      `> Día *${user.dailyStreak + 1}* » *¥${siguiente.toLocaleString()}*${rachaExtra}`, msg, true)
+    let mensaje = `✅ Has reclamado tu recompensa diaria de *${recompensa.toLocaleString()} ${monedas}*! (Día *${nuevaRacha}*)`;
+    mensaje += `\n📈 Día *${nuevaRacha + 1}* » *${siguiente.toLocaleString()}*`;
 
+    if (perdioRacha) mensaje += `\n⚠️ ¡Has perdido tu racha de días!`;
+    if (nuevaRacha >= 10) mensaje += `\n🔥 ¡Racha de *${nuevaRacha}* días! ¡Sigue así!`;
+
+    return msg.reply(mensaje);
   }
 };
 
 function calcularRecompensa(dia) {
-  const base = 10000
-  const incremento = 5000
-  const maximo = 100000
-  const recompensa = base + (dia - 1) * incremento
-  return Math.min(recompensa, maximo)
+  const base = 10000;
+  const incremento = 5000;
+  const maximo = 1000000;
+  const recompensa = base + (dia - 1) * incremento;
+  return Math.min(recompensa, maximo);
 }
 
 function formatRemainingTime(ms) {
-  const s = Math.floor(ms / 1000)
-  const h = Math.floor((s % 86400) / 3600)
-  const msg = Math.floor((s % 3600) / 60)
-  const seg = s % 60
-  const partes = []
-  if (h) partes.push(`${h} ${h === 1 ? 'hora' : 'horas'}`)
-  if (msg) partes.push(`${msg} ${msg === 1 ? 'minuto' : 'minutos'}`)
-  if (seg || partes.length === 0) partes.push(`${seg} ${seg === 1 ? 'segundo' : 'segundos'}`)
-  return partes.join(' ')
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const seg = s % 60;
+  const partes = [];
+  if (h) partes.push(`${h} ${h === 1 ? 'hora' : 'horas'}`);
+  if (m) partes.push(`${m} ${m === 1 ? 'minuto' : 'minutos'}`);
+  if (seg || partes.length === 0) partes.push(`${seg} ${seg === 1 ? 'segundo' : 'segundos'}`);
+  return partes.join(' ');
 }
