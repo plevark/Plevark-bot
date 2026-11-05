@@ -41,14 +41,10 @@ Siempre usa la librería principal y oficial de Baileys.
 <details>
 <summary><strong>🌵 Información</strong> — Oficial</summary>
 
-Quiero dejar algo completamente claro: mi base es única, original y desarrollada por mí.  
-Fue creada desde cero por **Carlos (AzamiJs)**, quien posteriormente se retiró del proyecto.  
-Desde entonces, durante todos estos meses, he sido yo quien la ha mejorado, optimizado y evolucionado hasta convertirla en lo que es hoy.
+Este bot es creado por mi si quieres reemplazar personajes ect ,adelante solo dejame creditos porfavor
 
-Cualquier otra versión que circule son copias no autorizadas que no representan mi trabajo real, no cuentan con mi aprobación y no tienen validez oficial dentro de mi proyecto.
 
-Mi estructura, mi lógica y mi diseño pertenecen exclusivamente a mi desarrollo.  
-Ninguna réplica, modificación o derivado externo tiene relación con mi trabajo actual ni con la identidad oficial de mi proyecto.
+1DIVIERTETE!
 
 </details>
 
