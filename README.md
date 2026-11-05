@@ -2,7 +2,7 @@
 > **Este proyecto está en constante evolución. Estamos comprometidos en ofrecer a nuestra comunidad un Bot increíble. Te invitamos a instalarlo y para estar al tanto de todas las novedades. [¡Únete a nuestro canal oficial!]([https://stellarwa.xyz/channel](https://whatsapp.com/channel/0029Vb93IH44IBhLAtGOvu2x))**
 
 <p align="center"> 
-<img src="https://i.postimg.cc/wj9jvJ58/descarga-(3).jpg" alt="AlyaBot-MD" style="width: 75%; height: auto; max-width: 100px;">
+<img src="https://i.postimg.cc/k5dFDT1M/Pusheen-the-Cat.jpg" alt="Pusheen-MD" style="width: 75%; height: auto; max-width: 100px;">
 
 <p align="center"> 
 <a href="#"><img title="AlyaBot-MD" src="https://img.shields.io/badge/¡Disfruta de un Bot totalmente gratuito, con múltiples funciones y de código abierto! -purple?colorA=%239b33b0&colorB=%231c007b&style=for-the-badge"></a> 
