@@ -5,18 +5,18 @@
 <img src="https://i.postimg.cc/k5dFDT1M/Pusheen-the-Cat.jpg" alt="Pusheen-MD" style="width: 75%; height: auto; max-width: 100px;">
 
 <p align="center"> 
-<a href="#"><img title="AlyaBot-MD" src="https://img.shields.io/badge/¡Disfruta de un Bot totalmente gratuito, con múltiples funciones y de código abierto! -purple?colorA=%239b33b0&colorB=%231c007b&style=for-the-badge"></a> 
+<a href="#"><img title="Pusheen-MD" src="https://img.shields.io/badge/¡Disfruta de un Bot totalmente gratuito, con múltiples funciones y de código abierto! -purple?colorA=%239b33b0&colorB=%231c007b&style=for-the-badge"></a> 
 </p>
 
 ---
 
-## 👣 Descripción 
+## 🍰 Descripción 
 
 Pusheen Bot es un bot de WhatsApp con multi funcionalidades basado en `baileys`.  ofrece una variedad de comandos para mejorar tu experiencia en WhatsApp.
 
 ---
 
-## 🥦 Características
+## 🧁 Características
 
 - Comandos Gacha 
 - Comandos de economia
@@ -30,7 +30,7 @@ Pusheen Bot es un bot de WhatsApp con multi funcionalidades basado en `baileys`.
 ## Informaciones Importantes
 
 <details>
-<summary><strong>🌵 Información</strong> — Recomendado</summary>
+<summary><strong>🧁 Información</strong> — Recomendado</summary>
 
 Evita completamente usar forks, mods o versiones alteradas de Baileys.
 No utilices “baileys mods” ni variantes no oficiales.
@@ -39,7 +39,7 @@ Siempre usa la librería principal y oficial de Baileys.
 </details>
 
 <details>
-<summary><strong>🌵 Información</strong> — Oficial</summary>
+<summary><strong>🎂 Información</strong> — Oficial</summary>
 
 Este bot es creado por mi si quieres reemplazar personajes ect ,adelante solo dejame creditos porfavor
 
