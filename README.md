@@ -56,11 +56,11 @@ Este bot es creado por mi si quieres reemplazar personajes ect ,adelante solo de
 <summary><strong>🦦 Cloud</strong> — Shell</summary>
 
 ```bash
-git clone https://github.com/plevark/Plevark-bot
+git clone https://github.com/plevark/Pusheen-The-Cat
 ```
 
 ```bash
-cd Plevark-bot
+cd Pusheen-The-Cat
 ```
 
 
@@ -85,11 +85,11 @@ apt update && apt upgrade && pkg install -y git nodejs ffmpeg imagemagick yarn
 ```
 
 ```bash
-git clone https://github.com/plevark/Plevark-bot
+git clone https://github.com/plevark/Pusheen-The-Cat
 ```
 
 ```bash
-cd Plevark-bot
+cd Pusheen-The-Cat
 ```
 
 ```bash
@@ -142,15 +142,15 @@ pm2 start index
 ### En caso de detenerse
 > _Si despues que ya instalastes tu bot y termux te salta en blanco, se fue tu internet o reiniciaste tu celular, solo realizaras estos pasos:_
 ```bash
-cd && cd Plevark-bot && npm start
+cd && cd Pusheen-The-Cat && npm start
 ```
 ---
 
 ### Obtener nuevo inicio de Sessión 
-> *Detén el bot, haz click en el símbolo (ctrl) [default=z] usar la letra "z" + "ENTER" hasta que salga algo verdes similar a: `Plevark-bot $`*
+> *Detén el bot, haz click en el símbolo (ctrl) [default=z] usar la letra "z" + "ENTER" hasta que salga algo verdes similar a: `Pusheen-The-Cat $`*
  
 ```bash 
-cd && cd Plevark-bot && rm -rf Sessions/Owner && npm start
+cd && cd Pusheen-The-Cat && rm -rf Sessions/Owner && npm start
 ```
 </details>
 
@@ -159,26 +159,16 @@ cd && cd Plevark-bot && rm -rf Sessions/Owner && npm start
 
 
 ### 🐢 Enlaces Principales
-| Servicio | Enlace |
+| | Enlace |
 |------------|-----------|
-| Sitio Web | [Visitar](https://cafirexos.com) |
-| Area de clientes | [Abrir](https://cafirexos.com/clientarea.php) |
-| Panel | [Abrir](https://panel.cafirexos.com) |
-| Estado de Servicios | [Ver](https://estado.cafirexos.com) 
-| Canal de WhatsApp | [Ver](https://links.cafirexos.com/whatsapp/canal) 
+| Canal de WhatsApp | [Ver](https://whatsapp.com/channel/0029Vb93IH44IBhLAtGOvu2x) 
 | Soporte | [Ver](https://cafirexos.com/contactenos)
 
 </details>
 
 ---
 
-### 🌿 Colaboradores
-<a href="https://stellarwa.xyz/about">
-  <img src="https://contrib.rocks/image?repo=DevZyxlJs/AlyaBot-MD" />
-</a>
 
-### 🌱 Agradecimientos
-[![Zam](https://github.com/AzamiJs.png?size=120)](https://stellarwa.xyz/about)
 
 ### 🪴 Propietario
-[![ZyxlJs](https://github.com/DevZyxlJs.png?size=120)](https://stellarwa.xyz/about) 
+[![Plevark](https://github.com/DevZyxlJs.png?size=120)](https://stellarwa.xyz/about) 
