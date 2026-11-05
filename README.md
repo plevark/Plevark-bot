@@ -53,7 +53,7 @@ Este bot es creado por mi si quieres reemplazar personajes ect ,adelante solo de
 ### Instalaciónes Básicas
 
 <details>
-<summary><strong>🦦 Cloud</strong> — Shell</summary>
+<summary><strong>🥧 Cloud</strong> — Shell</summary>
 
 ```bash
 git clone https://github.com/plevark/Pusheen-The-Cat
@@ -75,7 +75,7 @@ npm start
 </details>
 
 <details>
-<summary><strong>🦦 Termux</strong> — Manualmente</summary>
+<summary><strong>🎂 Termux</strong> — Manualmente</summary>
 
 ```bash
 termux-setup-storage
@@ -109,7 +109,7 @@ npm start
 </details>
 
 <details>
-<summary><strong>🦦 Comandos para tener mas tiempo activo</strong> — el Bot</summary>
+<summary><strong>🧁 Comandos para tener mas tiempo activo</strong> — el Bot</summary>
 
 > *Ejecutar estos comandos dentro de la carpeta Plevark-bot*
 ```bash
@@ -158,11 +158,11 @@ cd && cd Pusheen-The-Cat && rm -rf Sessions/Owner && npm start
 
 
 
-### 🐢 Enlaces Principales
+### 🎂 Enlaces Principales
 | | Enlace |
 |------------|-----------|
 | Canal de WhatsApp | [Ver](https://whatsapp.com/channel/0029Vb93IH44IBhLAtGOvu2x) 
-| Soporte | [Ver](https://cafirexos.com/contactenos)
+| Soporte | [Ver](https://chat.whatsapp.com/EIh2hJzNQKKAAkwCSXQybK)
 
 </details>
 
@@ -171,4 +171,4 @@ cd && cd Pusheen-The-Cat && rm -rf Sessions/Owner && npm start
 
 
 ### 🪴 Propietario
-[![Plevark](https://github.com/DevZyxlJs.png?size=120)](https://stellarwa.xyz/about) 
+[![Plevark](https://avatars.githubusercontent.com/u/271989332?v=4)
