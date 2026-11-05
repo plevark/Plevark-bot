@@ -171,4 +171,4 @@ cd && cd Pusheen-The-Cat && rm -rf Sessions/Owner && npm start
 
 
 ### 🪴 Propietario
-Plevark[https://avatars.githubusercontent.com/u/271989332?v=4&size=1000000](https://avatars.githubusercontent.com/u/271989332?v=4)
+Plevark (https://avatars.githubusercontent.com/u/271989332?v=4)
