@@ -56,16 +56,13 @@ Este bot es creado por mi si quieres reemplazar personajes ect ,adelante solo de
 <summary><strong>🦦 Cloud</strong> — Shell</summary>
 
 ```bash
-git clone https://github.com/DevZyxlJs/AlyaBot-MD
+git clone https://github.com/plevark/Plevark-bot
 ```
 
 ```bash
-cd AlyaBot-MD
+cd Plevark-bot
 ```
 
-```bash
-yarn install
-```
 
 ```bash
 npm install
@@ -88,11 +85,11 @@ apt update && apt upgrade && pkg install -y git nodejs ffmpeg imagemagick yarn
 ```
 
 ```bash
-git clone https://github.com/DevZyxlJs/AlyaBot-MD
+git clone https://github.com/plevark/Plevark-bot
 ```
 
 ```bash
-cd AlyaBot-MD
+cd Plevark-bot
 ```
 
 ```bash
@@ -114,7 +111,7 @@ npm start
 <details>
 <summary><strong>🦦 Comandos para tener mas tiempo activo</strong> — el Bot</summary>
 
-> *Ejecutar estos comandos dentro de la carpeta AlyaBot-MD*
+> *Ejecutar estos comandos dentro de la carpeta Plevark-bot*
 ```bash
 termux-wake-lock && npm i -g pm2 && pm2 start index.js && pm2 save && pm2 logs 
 ``` 
@@ -145,50 +142,21 @@ pm2 start index
 ### En caso de detenerse
 > _Si despues que ya instalastes tu bot y termux te salta en blanco, se fue tu internet o reiniciaste tu celular, solo realizaras estos pasos:_
 ```bash
-cd && cd AlyaBot-MD && npm start
+cd && cd Plevark-bot && npm start
 ```
 ---
 
 ### Obtener nuevo inicio de Sessión 
-> *Detén el bot, haz click en el símbolo (ctrl) [default=z] usar la letra "z" + "ENTER" hasta que salga algo verdes similar a: `AlyaBot-MD $`*
+> *Detén el bot, haz click en el símbolo (ctrl) [default=z] usar la letra "z" + "ENTER" hasta que salga algo verdes similar a: `Plevark-bot $`*
  
 ```bash 
-cd && cd AlyaBot-MD && rm -rf Sessions/Owner && npm start
+cd && cd Plevark-bot && rm -rf Sessions/Owner && npm start
 ```
 </details>
 
 ---
 
-### Patrocinadores del Proyecto
 
-<details>
-<summary><strong>☁️ Stellar</strong> — API</summary>
-
-<div align="center">
-  <a href="https://api.stellarwa.xyz">
-    <img src="https://api.stellarwa.xyz/favicon.ico" alt="Logo" height="125px">
-  </a>
-</div>
-
-### 🐢 Enlaces Principales
-| Servicio | Enlace |
-|------------|-----------|
-| Dashboard | [Abrir](https://api.stellarwa.xyz) |
-| Shop | [Abrir](https://api.stellarwa.xyz/store) 
-| Ticket | [Visitar](https://api.stellarwa.xyz/ticket)  
-| Estado de Servicios | [Ver](https://api.stellarwa.xyz/stats) | 
-| Canal | [Abrir](https://web.stellarwa.xyz/channel/api) |
-
-</details>
-
-<details>
-<summary><strong>☁️ Cafirexos</strong> — Hosting</summary>
-
-<div align="center">
-  <a href="https://cafirexos.com">
-    <img src="https://cdn.cafirexos.com/logos/logo_cfros_2000x2000.png" alt="Logo" height="125px">
-  </a>
-</div>
 
 ### 🐢 Enlaces Principales
 | Servicio | Enlace |
